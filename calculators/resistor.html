@@ -1,0 +1,56 @@
+---
+layout: null
+calculator: true
+title: "抵抗カラーコード計算機"
+description: "4本帯・5本帯の抵抗値と許容差を計算"
+icon: "Ω"
+order: 20
+---
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>抵抗カラーコード計算機｜電子回路ツールボックス</title><link rel="stylesheet" href="../style.css"><style>.rgraphic{width:100%;max-width:360px;display:block;margin:18px auto 8px}.rfields{display:grid;gap:8px;margin:14px 0}.rfield{display:grid;grid-template-columns:minmax(82px,1fr) minmax(130px,1.5fr);align-items:center;gap:10px}.rfield label{margin:0}.rfield select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:11px;width:100%;min-width:0}.rchoice{display:flex;align-items:center;gap:8px}.rchip{width:24px;height:24px;border:1px solid #8a8a8a;border-radius:5px;flex:none}.rmode{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}.rmode button[aria-pressed=true]{background:var(--soft);color:var(--accent);border-color:var(--accent);font-weight:700}#ranswer{font-size:clamp(24px,7vw,38px);font-weight:750;color:var(--accent);overflow-wrap:anywhere}.rresult{display:flex;flex-direction:column;gap:6px}#rformula{overflow-wrap:anywhere}
+</style></head><body><main><a class="back" href="../">← 計算機一覧</a><header><small>電子回路ツールボックス</small><h1>抵抗カラーコード計算機</h1><div class="muted">4本帯・5本帯の抵抗値と許容差を計算</div></header><section class="panel" id="resistor">
+<div class="row"><h2>抵抗カラーコード</h2><button id="rreset">リセット</button></div>
+<div class="rmode" id="rmode"><button data-count="4" aria-pressed="true">4本帯</button><button data-count="5" aria-pressed="false">5本帯</button></div>
+<svg class="rgraphic" viewBox="0 0 340 100" role="img" aria-label="選択したカラーコードの抵抗">
+<defs><linearGradient id="rbody" x2="0" y2="1"><stop stop-color="#f5e0ba"/><stop offset=".5" stop-color="#d9be8d"/><stop offset="1" stop-color="#b69a6f"/></linearGradient><clipPath id="rclip"><path d="M75 25 Q90 12 110 24 H230 Q250 12 265 25 Q278 50 265 75 Q250 88 230 76 H110 Q90 88 75 75 Q62 50 75 25Z"/></clipPath></defs>
+<path d="M8 50H332" stroke="#9da5b0" stroke-width="7" stroke-linecap="round"/><path d="M75 25 Q90 12 110 24 H230 Q250 12 265 25 Q278 50 265 75 Q250 88 230 76 H110 Q90 88 75 75 Q62 50 75 25Z" fill="url(#rbody)" stroke="#9d865e"/><g id="rbands" clip-path="url(#rclip)"></g></svg>
+<div class="rfields" id="rfields"></div>
+<div class="result rresult"><small>抵抗値 R</small><div class="row"><div id="ranswer" aria-live="polite"></div><button id="rcopy">コピー</button></div><div id="rtolerance" class="muted"></div></div>
+<div class="values"><div class="row"><span>最小抵抗値</span><span id="rmin"></span></div><div class="row"><span>最大抵抗値</span><span id="rmax"></span></div></div>
+<p class="hint" id="rformula"></p><p class="hint">金・銀などの許容差帯を右側にして読み取ります。色選択と同時に抵抗値を計算します。</p>
+</section><footer>計算処理は端末内で実行</footer></main><script src="../common.js"></script><script>(function(){
+const palette=[
+['black','黒','#171717',0],['brown','茶','#85431f',1],['red','赤','#d62d32',2],['orange','橙','#f18c20',3],['yellow','黄','#f7d62d',4],['green','緑','#238442',5],['blue','青','#2864cb',6],['violet','紫','#8348a8',7],['gray','灰','#888888',8],['white','白','#f8f8f8',9],['gold','金','#c6a344',-1],['silver','銀','#bfc4cc',-2],['none','なし','transparent',null]];
+const colors=Object.fromEntries(palette.map(c=>[c[0],c]));
+const tolerance={brown:1,red:2,green:0.5,blue:0.25,violet:0.1,gray:0.05,gold:5,silver:10,none:20};
+const digits=palette.slice(0,10).map(c=>c[0]), multipliers=palette.slice(0,12).map(c=>c[0]);
+let count=4,selected=[],resultText='';
+const ohms=n=>{const b=[[1e9,'GΩ'],[1e6,'MΩ'],[1e3,'kΩ'],[1,'Ω']].find(x=>n>=x[0])||[1,'Ω'];return fmt(n/b[0])+' '+b[1]};
+function reset(){selected=count===4?['brown','black','red','gold']:['brown','black','black','brown','brown'];render()}
+function render(){
+ const fields=$('rfields');fields.replaceChildren();
+ const n=count-2;
+ const labels=Array.from({length:n},(_,i)=>'第'+(i+1)+'数字').concat(['乗数','許容差']);
+ labels.forEach((name,i)=>{
+  const opts=i===0?digits.slice(1):i<n?digits:i===n?multipliers:Object.keys(tolerance);
+  const row=document.createElement('div');row.className='rfield';
+  const label=document.createElement('label');label.textContent=name;label.htmlFor='rband'+i;
+  const choice=document.createElement('div');choice.className='rchoice';
+  const chip=document.createElement('span');chip.className='rchip';chip.style.background=colors[selected[i]][2];chip.setAttribute('aria-hidden','true');
+  const select=document.createElement('select');select.id='rband'+i;
+  opts.forEach(key=>{const c=colors[key],o=document.createElement('option');o.value=key;o.textContent=c[1]+'　'+(i<n?c[3]:i===n?'×'+fmt(10**c[3]):'±'+tolerance[key]+'%');select.append(o)});
+  select.value=selected[i];select.addEventListener('change',()=>{selected[i]=select.value;chip.style.background=colors[select.value][2];calculate()});
+  choice.append(chip,select);row.append(label,choice);fields.append(row);
+ });calculate();
+}
+function calculate(){
+ const n=count-2;const sig=selected.slice(0,n).reduce((a,k)=>a*10+colors[k][3],0);const exp=colors[selected[n]][3];const tol=tolerance[selected[n+1]];const resistance=sig*10**exp;
+ resultText=ohms(resistance)+' ±'+tol+'%';
+ $('ranswer').textContent=ohms(resistance);$('rtolerance').textContent='許容差 ±'+tol+'%';$('rmin').textContent=ohms(resistance*(1-tol/100));$('rmax').textContent=ohms(resistance*(1+tol/100));$('rformula').textContent=sig+' × '+fmt(10**exp)+' Ω = '+ohms(resistance);
+ const positions=count===4?[101,140,179,241]:[96,127,158,189,241];const group=$('rbands');group.replaceChildren();
+ selected.forEach((key,i)=>{if(key==='none')return;const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');rect.setAttribute('x',positions[i]);rect.setAttribute('y','12');rect.setAttribute('width','15');rect.setAttribute('height','76');rect.setAttribute('fill',colors[key][2]);group.append(rect)});
+}
+$('rmode').addEventListener('click',e=>{if(!e.target.dataset.count)return;count=Number(e.target.dataset.count);for(const b of $('rmode').children)b.setAttribute('aria-pressed',String(Number(b.dataset.count)===count));reset()});
+$('rreset').onclick=reset;$('rcopy').onclick=async()=>{try{await navigator.clipboard.writeText(resultText);$('rcopy').textContent='コピー済み';setTimeout(()=>$('rcopy').textContent='コピー',1000)}catch{window.prompt('抵抗値をコピー',resultText)}};reset();
+})();
+</script></body></html>
