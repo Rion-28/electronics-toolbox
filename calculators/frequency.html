@@ -2,16 +2,48 @@
 layout: null
 calculator: true
 title: "周波数計算機"
-description: "周期から周波数を計算・四則演算対応"
+description: "周期と周波数の相互変換・四則演算対応"
 icon: "ƒ"
 order: 10
 ---
 <!doctype html>
-<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>周波数計算機｜電子回路ツールボックス</title><link rel="stylesheet" href="../style.css"></head><body><main><a class="back" href="../">← 計算機一覧</a><header><small>電子回路ツールボックス</small><h1>周波数計算機</h1><div class="muted">周期から周波数を計算・四則演算対応</div></header><section class="panel" id="frequency"><div class="row"><h2>周期 → 周波数</h2><button id="clear">AC</button></div><label for="period">周期 T（数値・数式）</label><input id="period" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="例：1/3×4" value="4"><div class="units" id="units"><button data-unit="ns" aria-pressed="false">ns</button><button data-unit="us" aria-pressed="true">µs</button><button data-unit="ms" aria-pressed="false">ms</button><button data-unit="s" aria-pressed="false">s</button></div><div class="keys" id="keys"></div><p class="hint" id="calculated" aria-live="polite"></p><div class="result"><small>周波数 f</small><div class="row"><div id="answer" aria-live="polite">—</div><button id="copy">コピー</button></div></div><div class="values" id="values"></div><p class="hint">f = 1/T（T は秒）<br>分数・小数・四則演算・括弧に対応。例：1/4、2×5、(1/3)×4</p></section><footer>計算処理は端末内で実行</footer></main><script src="../common.js"></script><script>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>周波数計算機｜電子回路ツールボックス</title><link rel="stylesheet" href="../style.css"><style>#direction{font:inherit;font-weight:700;color:var(--accent);background:var(--soft);border:1px solid var(--line);padding:10px 12px;white-space:normal;text-align:left}#direction:hover,#direction:focus-visible{border-color:var(--accent)}</style></head><body><main><a class="back" href="../">← 計算機一覧</a><header><small>電子回路ツールボックス</small><h1>周波数計算機</h1><div class="muted">周期と周波数の相互変換・四則演算対応</div></header><section class="panel" id="frequency"><div class="row"><h2><button type="button" id="direction" aria-label="計算方向を切り替える" aria-pressed="false" title="押すと計算方向を切り替えます">周期 → 周波数</button></h2><button id="clear">AC</button></div><label id="inputLabel" for="period">周期 T（数値・数式）</label><input id="period" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="例：1/3×4" value="4"><div class="units" id="units"><button data-unit="ns" aria-pressed="false">ns</button><button data-unit="us" aria-pressed="true">µs</button><button data-unit="ms" aria-pressed="false">ms</button><button data-unit="s" aria-pressed="false">s</button></div><div class="keys" id="keys"></div><p class="hint" id="calculated" aria-live="polite"></p><div class="result"><small id="outputLabel">周波数 f</small><div class="row"><div id="answer" aria-live="polite">—</div><button id="copy">コピー</button></div></div><div class="values" id="values"></div><p class="hint"><span id="formula">f = 1/T（T は秒）</span><br>分数・小数・四則演算・括弧に対応。例：1/4、2×5、(1/3)×4</p></section><footer>計算処理は端末内で実行</footer></main><script src="../common.js"></script><script>
 'use strict';
 function parse(raw){let s=raw.normalize('NFKC').replace(/[×xX]/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/\s/g,'');if(s.length>300)throw Error('数式が長すぎます');let i=0;function atom(){if(s[i]==='+'){i++;return atom()}if(s[i]==='-'){i++;return -atom()}if(s[i]==='('){i++;let v=add();if(s[i++]!==')')throw Error();return v}let m=s.slice(i).match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);if(!m)throw Error();i+=m[0].length;return Number(m[0])}function mul(){let v=atom();while(s[i]==='*'||s[i]==='/'){let op=s[i++],b=atom();if(op==='/'&&b===0)throw Error();v=op==='*'?v*b:v/b}return v}function add(){let v=mul();while(s[i]==='+'||s[i]==='-'){let op=s[i++],b=mul();v=op==='+'?v+b:v-b}return v}let v=add();if(i!==s.length||!Number.isFinite(v)||v<=0)throw Error();return v}
-const scales={ns:1e9,us:1e6,ms:1e3,s:1};const bands=[[1e9,'GHz'],[1e6,'MHz'],[1e3,'kHz'],[1,'Hz']];let unit='us',copyText='';
-function update(){let t,f;try{t=parse($('period').value);f=scales[unit]/t;if(!Number.isFinite(f)||f<=0)throw Error()}catch{t=f=NaN}let valid=Number.isFinite(f);$('calculated').textContent=valid?'計算後の周期：'+fmt(t)+' '+(unit==='us'?'µs':unit):$('period').value.trim()?'正の周期を表す数式を入力してください。':'周期を入力してください。';let b=bands.find(x=>f>=x[0])||bands[3];copyText=valid?fmt(f/b[0])+' '+b[1]:'';$('answer').textContent=copyText||'—';$('copy').disabled=!valid;$('values').replaceChildren(...bands.map(([n,u])=>{let r=document.createElement('div');r.className='row';let l=document.createElement('span'),v=document.createElement('span');l.textContent=u;v.textContent=valid?fmt(f/n):'—';r.append(l,v);return r}));}
-$('units').addEventListener('click',e=>{if(!e.target.dataset.unit)return;unit=e.target.dataset.unit;for(let b of $('units').children)b.setAttribute('aria-pressed',String(b.dataset.unit===unit));update()});$('period').addEventListener('input',update);$('clear').onclick=()=>{$('period').value='';update()};for(let k of ['7','8','9','÷','4','5','6','×','1','2','3','−','0','.','(',')','00','+','⌫','AC']){let b=document.createElement('button');b.textContent=k;if('÷×−()+⌫AC'.includes(k))b.className='op';b.onclick=()=>{let inp=$('period');if(k==='AC')inp.value='';else if(k==='⌫')inp.value=inp.value.slice(0,-1);else inp.value+=k;update()};$('keys').append(b)}$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(copyText);$('copy').textContent='コピー済み';setTimeout(()=>$('copy').textContent='コピー',1000)}catch{window.prompt('周波数をコピー',copyText)}};update();
+
+const timeUnits=[{key:'ns',label:'ns',scale:1e-9},{key:'us',label:'µs',scale:1e-6},{key:'ms',label:'ms',scale:1e-3},{key:'s',label:'s',scale:1}];
+const frequencyUnits=[{key:'Hz',label:'Hz',scale:1},{key:'kHz',label:'kHz',scale:1e3},{key:'MHz',label:'MHz',scale:1e6},{key:'GHz',label:'GHz',scale:1e9}];
+let reverse=false,unit='us',copyText='',lastResult=null;
+function inputUnits(){return reverse?frequencyUnits:timeUnits}
+function outputUnits(){return [...(reverse?timeUnits:frequencyUnits)].sort((a,b)=>b.scale-a.scale)}
+function renderUnits(){
+ $('units').replaceChildren(...inputUnits().map(u=>{let b=document.createElement('button');b.type='button';b.dataset.unit=u.key;b.textContent=u.label;b.setAttribute('aria-pressed',String(unit===u.key));return b}));
+}
+function update(){
+ const inName=reverse?'周波数':'周期',out=outputUnits(),inUnit=inputUnits().find(u=>u.key===unit);let v,result;
+ try{v=parse($('period').value);result=(1/v)/inUnit.scale;if(!Number.isFinite(result)||result<=0)throw Error()}catch{v=result=NaN}
+ const valid=Number.isFinite(result);
+ $('calculated').textContent=valid?'計算後の'+inName+'：'+fmt(v)+' '+inUnit.label:$('period').value.trim()?'正の'+inName+'を表す数式を入力してください。':inName+'を入力してください。';
+ const best=out.find(u=>result>=u.scale)||out[out.length-1];
+ lastResult=valid?{value:result/best.scale,key:best.key}:null;
+ copyText=valid?fmt(result/best.scale)+' '+best.label:'';
+ $('answer').textContent=copyText||'—';$('copy').disabled=!valid;
+ $('values').replaceChildren(...out.map(u=>{let r=document.createElement('div');r.className='row';let l=document.createElement('span'),v=document.createElement('span');l.textContent=u.label;v.textContent=valid?fmt(result/u.scale):'—';r.append(l,v);return r}));
+}
+$('direction').addEventListener('click',()=>{
+ const previous=lastResult;reverse=!reverse;
+ $('direction').textContent=reverse?'周波数 → 周期':'周期 → 周波数';
+ $('direction').setAttribute('aria-pressed',String(reverse));
+ $('inputLabel').textContent=reverse?'周波数 f（数値・数式）':'周期 T（数値・数式）';
+ $('outputLabel').textContent=reverse?'周期 T':'周波数 f';
+ $('formula').textContent=reverse?'T = 1/f（f は Hz）':'f = 1/T（T は秒）';
+ unit=previous?previous.key:(reverse?'kHz':'us');
+ $('period').value=previous?String(previous.value):'';
+ renderUnits();update();
+});
+$('units').addEventListener('click',e=>{if(!e.target.dataset.unit)return;unit=e.target.dataset.unit;for(let b of $('units').children)b.setAttribute('aria-pressed',String(b.dataset.unit===unit));update()});
+$('period').addEventListener('input',update);$('clear').onclick=()=>{$('period').value='';update()};
+renderUnits();
+for(let k of ['7','8','9','÷','4','5','6','×','1','2','3','−','0','.','(',')','00','+','⌫','AC']){let b=document.createElement('button');b.textContent=k;if('÷×−()+⌫AC'.includes(k))b.className='op';b.onclick=()=>{let inp=$('period');if(k==='AC')inp.value='';else if(k==='⌫')inp.value=inp.value.slice(0,-1);else inp.value+=k;update()};$('keys').append(b)}$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(copyText);$('copy').textContent='コピー済み';setTimeout(()=>$('copy').textContent='コピー',1000)}catch{window.prompt('周波数をコピー',copyText)}};update();
 
 </script></body></html>
